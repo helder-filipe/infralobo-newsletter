@@ -232,9 +232,9 @@ function outlookContent(html){
 function emailArticleParts(a,imageWidth=560){
  const url=imageURL(a.image),fit=a.imageFit==='contain'?'contain':'cover';
  const image=url?'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(a.title||'Imagem da notícia')+'" width="'+imageWidth+'" style="display:block;width:100%;max-width:100%;height:auto;object-fit:'+fit+';border:0">':'';
- const text='<div style="font-family:Arial,Helvetica,sans-serif;color:#24312a;line-height:1.65;overflow-wrap:break-word">'+
+ const text='<div style="font-family:Arial,Helvetica,sans-serif;color:#24312a;font-size:'+(imageWidth<=160?'12px':'14px')+';line-height:1.55;overflow-wrap:anywhere;word-wrap:break-word">'+
   '<div style="font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6A994E;margin:0 0 7px">'+escapeHTML(a.category||'Notícia')+'</div>'+
-  '<h3 style="font-size:20px;line-height:1.3;color:#386641;margin:0 0 15px">'+escapeHTML(a.title)+'</h3>'+
+  '<h3 style="font-size:'+(imageWidth<=160?'15px':'20px')+';line-height:1.3;color:#386641;margin:0 0 12px;word-break:break-word">'+escapeHTML(a.title)+'</h3>'+
   outlookContent(articleHTML(a))+
   (validURL(a.link)?'<p style="margin:14px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Saber mais</a></p>':'')+
   '</div>';
