@@ -88,7 +88,7 @@ const editor=(data,idx)=>'<div class="fields">'+field('Categoria',data.category,
 function editUI(){
 $('month').value=state.month;$('number').value=state.number;$('title').value=state.title;$('editorialFields').innerHTML=richField({text:state.intro,html:state.introHtml});
 $('featuredFields').innerHTML='<div class="article-edit" data-article="featured">'+editor(state.featured,null)+'</div>';
-$('articleFields').innerHTML=state.articles.map((a,i)=>'<details class="article-edit" data-article="'+i+'" '+(i===state.articles.length-1?'open':'')+'><summary>'+(i+1)+'. '+escapeHTML(a.title||'Nova notícia')+'</summary>'+editor(a,i)+'</details>').join('');
+$('articleFields').innerHTML=state.articles.map((a,i)=>'<div class="article-sort-row" data-sort-index="'+i+'"><div class="sort-controls"><span class="drag-handle" draggable="true" tabindex="0" role="button" aria-label="Arrastar notícia '+(i+1)+' para reordenar" title="Arraste para alterar a ordem">⠿</span><div class="sort-arrows"><button type="button" class="sort-arrow" data-move="up" '+(i===0?'disabled':'')+' aria-label="Subir notícia '+(i+1)+'" title="Subir">↑</button><button type="button" class="sort-arrow" data-move="down" '+(i===state.articles.length-1?'disabled':'')+' aria-label="Descer notícia '+(i+1)+'" title="Descer">↓</button></div></div><details class="article-edit" data-article="'+i+'" '+(i===state.articles.length-1?'open':'')+'><summary>'+(i+1)+'. '+escapeHTML(a.title||'Nova notícia')+'</summary>'+editor(a,i)+'</details></div>').join('');
 $('count').textContent='('+state.articles.length+'/10)';$('add').disabled=state.articles.length>=10;
 }
 function picture(url,cls=''){const safe=imageURL(url);return safe?'<img class="'+cls+'" src="'+escapeHTML(safe)+'" alt="Imagem da notícia" loading="lazy" referrerpolicy="no-referrer">':'<div class="placeholder">INFRALOBO · Notícias</div>'}
@@ -103,6 +103,57 @@ function updateFromEditor(e){const el=e.target;if(!el.dataset.prop && !['month',
 ['month','number','title'].forEach(id=>$(id).addEventListener('input',updateFromEditor));
 $('featuredFields').addEventListener('input',updateFromEditor);
 for(const id of ['editorialFields','featuredFields','articleFields']){const el=$(id);el.addEventListener('input',e=>{if(e.target.matches('[data-rich]'))storeRich(e.target)});el.addEventListener('mousedown',e=>{if(e.target.closest('[data-command]'))e.preventDefault()});el.addEventListener('click',onRichClick);el.addEventListener('change',onRichChange)}
+
+let draggingArticleIndex=null;
+function reorderArticle(from,to,focusDirection){
+ if(!Number.isInteger(from)||!Number.isInteger(to)||from<0||to<0||from>=state.articles.length||to>=state.articles.length||from===to)return;
+ const [article]=state.articles.splice(from,1);state.articles.splice(to,0,article);
+ editUI();save();
+ notify('Notícia movida para a posição '+(to+1)+'.');
+ if(focusDirection){const row=$('articleFields').querySelector('[data-sort-index="'+to+'"]');row?.querySelector('[data-move="'+focusDirection+'"]')?.focus();}
+}
+const articleContainer=$('articleFields');
+articleContainer.addEventListener('click',e=>{
+ const btn=e.target.closest('[data-move]');if(!btn)return;
+ const row=btn.closest('[data-sort-index]'),from=Number(row?.dataset.sortIndex);
+ const delta=btn.dataset.move==='up'?-1:1;
+ reorderArticle(from,from+delta,btn.dataset.move);
+});
+articleContainer.addEventListener('dragstart',e=>{
+ const handle=e.target.closest('.drag-handle');if(!handle){e.preventDefault();return}
+ draggingArticleIndex=Number(handle.closest('[data-sort-index]').dataset.sortIndex);
+ e.dataTransfer.effectAllowed='move';
+ e.dataTransfer.setData('text/plain',String(draggingArticleIndex));
+ handle.closest('.article-sort-row').classList.add('is-dragging');
+});
+articleContainer.addEventListener('dragover',e=>{
+ const row=e.target.closest('.article-sort-row');
+ if(draggingArticleIndex===null||!row)return;
+ e.preventDefault();e.dataTransfer.dropEffect='move';
+ articleContainer.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'));
+ row.classList.add('drop-target');
+});
+articleContainer.addEventListener('drop',e=>{
+ const row=e.target.closest('.article-sort-row');
+ if(draggingArticleIndex===null||!row)return;
+ e.preventDefault();
+ const from=draggingArticleIndex,to=Number(row.dataset.sortIndex);
+ draggingArticleIndex=null;
+ articleContainer.querySelectorAll('.drop-target,.is-dragging').forEach(el=>el.classList.remove('drop-target','is-dragging'));
+ reorderArticle(from,to);
+});
+articleContainer.addEventListener('dragend',()=>{
+ draggingArticleIndex=null;
+ articleContainer.querySelectorAll('.drop-target,.is-dragging').forEach(el=>el.classList.remove('drop-target','is-dragging'));
+});
+articleContainer.addEventListener('keydown',e=>{
+ if(!e.target.matches('.drag-handle')||!e.altKey||!['ArrowUp','ArrowDown'].includes(e.key))return;
+ e.preventDefault();
+ const from=Number(e.target.closest('[data-sort-index]').dataset.sortIndex);
+ const to=from+(e.key==='ArrowUp'?-1:1);
+ reorderArticle(from,to,e.key==='ArrowUp'?'up':'down');
+});
+
 $('articleFields').addEventListener('input',updateFromEditor);
 $('articleFields').addEventListener('click',e=>{const btn=e.target.closest('[data-remove]');if(!btn)return;if(!confirm('Eliminar esta notícia?'))return;state.articles.splice(Number(btn.dataset.remove),1);editUI();save();notify('Notícia eliminada.')});
 $('add').addEventListener('click',()=>{if(state.articles.length>=10)return notify('Máximo de 10 notícias.');state.articles.push({title:'Nova notícia',category:'Atualidade',text:'',image:'',link:''});editUI();save()});
