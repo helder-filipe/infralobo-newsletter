@@ -273,7 +273,7 @@ function emailRow(items,widths,modes=[],compactColumns=false,originalMagazine=fa
 /* No Outlook clássico, "float" não é fiável: uma pequena imagem acompanha
    o início do artigo e o texto restante volta à largura completa. */
 function emailFlowArticle(a,side='left',compact=false){
- const parts=emailArticleParts(a,compact?170:190);
+ const parts=emailArticleParts(a,compact?260:210);
  const doc=new DOMParser().parseFromString('<div>'+outlookContent(articleHTML(a))+'</div>','text/html');
  const root=doc.body.firstElementChild;
  const nodes=Array.from(root.childNodes);
@@ -288,7 +288,7 @@ function emailFlowArticle(a,side='left',compact=false){
   '<h3 style="color:#386641;font-size:'+(compact?'18px':'21px')+';line-height:1.3;margin:0 0 14px">'+escapeHTML(a.title)+'</h3>';
  const link=validURL(a.link)?'<p style="margin:12px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641">Saber mais</a></p>':'';
  if(!parts.image)return '<div style="padding:14px 0;border-bottom:1px solid #dce6dc">'+title+outlookContent(articleHTML(a))+link+'</div>';
- const width=compact?170:190;
+ const width=compact?260:210;
  const image='<img src="'+escapeHTML(imageURL(a.image))+'" width="'+width+'" alt="'+escapeHTML(a.title||'Imagem')+'" style="display:block;width:'+width+'px;max-width:100%;height:auto;border:0">';
  const imageCell='<td valign="top" width="'+width+'" style="width:'+width+'px;padding:'+(side==='right'?'0 0 10px 16px':'0 16px 10px 0')+'">'+image+'</td>';
  const textCell='<td valign="top" style="padding:0;font-size:14px;line-height:1.6;word-wrap:break-word">'+(snippet||'<p style="margin-top:0;color:#66756b"> </p>')+'</td>';
@@ -313,8 +313,12 @@ function emailLayout(articles,layout){
  }else if(layout==='magazine'){
   for(let i=0;i<articles.length;i+=6){
    if(articles[i])out.push(emailRow(articles.slice(i,i+2),[66,34],[],false,true));
-   if(articles[i+2])out.push('<div style="padding:8px">'+emailArticle(articles[i+2],'horizontal',false,600)+'</div>');
-   if(articles[i+3])out.push(emailRow(articles.slice(i+3,i+6),[34,33,33],[],false,true));
+   if(articles[i+2])out.push('<div style="padding:8px">'+emailFlowArticle(articles[i+2],'left',false)+'</div>');
+   if(articles[i+3]){
+    const tail=articles.slice(i+3,i+6);
+    if(tail.length===1)out.push('<div style="padding:8px">'+emailFlowArticle(tail[0],'left',false)+'</div>');
+    else out.push(emailRow(tail,tail.length===2?[50,50]:[34,33,33],[],false,true));
+   }
   }
  }else if(layout==='list'){
   articles.forEach(a=>out.push(emailFlowArticle(a,'left',false)));
