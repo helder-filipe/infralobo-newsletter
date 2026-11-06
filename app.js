@@ -270,6 +270,37 @@ function emailRow(items,widths,modes=[],compactColumns=false){
  }).join('');
  return '<table role="presentation" class="news-row" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed"><tr>'+cols+'</tr></table>';
 }
+/* No Outlook clássico, "float" não é fiável: uma pequena imagem acompanha
+   o início do artigo e o texto restante volta à largura completa. */
+function emailFlowArticle(a,side='left',compact=false){
+ const parts=emailArticleParts(a,compact?92:190);
+ const doc=new DOMParser().parseFromString('<div>'+outlookContent(articleHTML(a))+'</div>','text/html');
+ const root=doc.body.firstElementChild;
+ const nodes=Array.from(root.childNodes);
+ const firstParagraph=nodes.find(n=>n.nodeType===1&&['P','DIV'].includes(n.tagName));
+ let snippet='';
+ if(firstParagraph&&firstParagraph.textContent.trim()&&nodes.length>1){
+   snippet=firstParagraph.outerHTML;
+   firstParagraph.remove();
+ }
+ const trailing=root.innerHTML;
+ const title='<div style="margin:0 0 12px;font-size:11px;color:#6A994E;font-weight:bold;text-transform:uppercase">'+escapeHTML(a.category||'Notícia')+'</div>'+
+  '<h3 style="color:#386641;font-size:'+(compact?'18px':'21px')+';line-height:1.3;margin:0 0 14px">'+escapeHTML(a.title)+'</h3>';
+ const link=validURL(a.link)?'<p style="margin:12px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641">Saber mais</a></p>':'';
+ if(!parts.image)return '<div style="padding:14px 0;border-bottom:1px solid #dce6dc">'+title+outlookContent(articleHTML(a))+link+'</div>';
+ const width=compact?92:190;
+ const image='<img src="'+escapeHTML(imageURL(a.image))+'" width="'+width+'" alt="'+escapeHTML(a.title||'Imagem')+'" style="display:block;width:'+width+'px;max-width:100%;height:auto;border:0">';
+ const imageCell='<td valign="top" width="'+width+'" style="width:'+width+'px;padding:'+(side==='right'?'0 0 10px 16px':'0 16px 10px 0')+'">'+image+'</td>';
+ const textCell='<td valign="top" style="padding:0;font-size:14px;line-height:1.6;word-wrap:break-word">'+(snippet||'<p style="margin-top:0;color:#66756b"> </p>')+'</td>';
+ const cells=side==='right'?textCell+imageCell:imageCell+textCell;
+ const head='<div style="margin:0 0 8px">'+title+'</div>';
+ // Sem outro parágrafo, apresentar o corpo em toda a largura abaixo da imagem.
+ const beneath=snippet?trailing:outlookContent(articleHTML(a));
+ return '<div style="padding:17px 0;border-bottom:1px solid #dce6dc">'+head+
+  (snippet?'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>'+cells+'</tr></table>':
+  '<div style="padding:0 0 12px">'+image+'</div>')+
+  '<div style="font-size:14px;line-height:1.65;word-wrap:break-word">'+beneath+link+'</div></div>';
+}
 function emailLayout(articles,layout){
  const out=[];
  if(layout==='classic'){
@@ -286,16 +317,16 @@ function emailLayout(articles,layout){
    if(articles[i+3])out.push(emailRow(articles.slice(i+3,i+6),[34,33,33]));
   }
  }else if(layout==='list'){
-  articles.forEach(a=>out.push('<div style="padding:8px 0;border-bottom:1px solid #dce6dc">'+emailArticle(a,'horizontal')+'</div>'));
+  articles.forEach(a=>out.push(emailFlowArticle(a,'left',false)));
  }else if(layout==='mosaic'){
   for(let i=0;i<articles.length;i+=5){
    out.push(emailRow(articles.slice(i,i+2),[72,28]));
    if(articles[i+2])out.push(emailRow(articles.slice(i+2,i+5),[34,33,33]));
   }
  }else if(layout==='alternating'){
-  articles.forEach((a,i)=>out.push('<div style="padding:9px 0">'+emailArticle(a,'horizontal',i%2===1)+'</div>'));
+  articles.forEach((a,i)=>out.push(emailFlowArticle(a,i%2===1?'right':'left',false)));
  }else if(layout==='minimal'){
-  articles.forEach(a=>out.push(emailArticle(a,'compact')));
+  articles.forEach(a=>out.push(emailFlowArticle(a,'right',true)));
  }else{
   articles.forEach(a=>out.push(emailRow([a],[100])));
  }
