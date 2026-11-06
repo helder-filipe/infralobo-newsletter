@@ -46,7 +46,7 @@ function safeRich(html){
   if(!ok.has(tag))return inside;
   if(tag==='BR')return '<br>';
   if(tag==='A')return validHref?'<a href="'+escapeHTML(validHref)+'"'+(validHref.startsWith('mailto:')?'':' target="_blank" rel="noopener noreferrer"')+'>'+inside+'</a>':inside;
-  const name={DIV:'p',B:'strong',I:'em'}[tag]||tag.toLowerCase(),styles=[];
+  const name={B:'strong',I:'em'}[tag]||tag.toLowerCase(),styles=[];
   const st=n.style;
   if(['P','DIV','LI','BLOCKQUOTE'].includes(tag)){
    const align=st.textAlign||n.getAttribute('align');if(['left','right','center','justify'].includes(align))styles.push('text-align:'+align);
@@ -205,8 +205,43 @@ function outlookFilename(){
 $('exportJson').addEventListener('click',()=>download(filename('json'),JSON.stringify(state,null,2),'application/json'));
 $('importJson').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!v||typeof v!=='object'||!Array.isArray(v.articles))throw Error();saveCurrentToArchive();state={...starter(),...v,featured:{...starter().featured,...v.featured},articles:v.articles.slice(0,10),editionId:editionId(),layout:['classic','odd','magazine','list','mosaic','alternating','minimal'].includes(v.layout)?v.layout:'classic'};editUI();save();renderEditionList();notify('Edição importada.')}catch{notify('Ficheiro JSON inválido.')}e.target.value=''});
-const cssEmail='body{margin:0;background:#f5f8f3;font-family:Arial,sans-serif;color:#24312a}.wrap{max-width:700px;margin:auto;background:#fff}.head{padding:32px;border-bottom:6px solid #A7C957}h1{color:#386641}.section{padding:25px 32px;border-bottom:1px solid #dce6dc}.section img{max-width:100%;height:auto;border-radius:8px}.section h2{color:#386641}.section p{line-height:1.65}.editorial-email p{margin:0 0 12px}.foot{padding:25px 32px;background:#386641;color:white}a{color:#386641}';
-function emailBody(){const section=(a,lead)=>'<div class="section">'+(lead?'<b style="color:#6A994E">EM DESTAQUE</b>':'')+(imageURL(a.image)?'<p><img src="'+escapeHTML(imageURL(a.image))+'" alt="Imagem da notícia" width="636" style="display:block;max-width:100%;height:auto"></p>':'')+'<h2>'+escapeHTML(a.title)+'</h2><div>'+articleHTML(a)+'</div>'+(validURL(a.link)?'<p><a href="'+escapeHTML(validURL(a.link))+'">Saber mais</a></p>':'')+'</div>';return '<div class="wrap"><div class="head"><p><img src="https://infralobo-newsletter.vercel.app/logo-infralobo.png" alt="Infralobo Empresa Municipal" width="260" style="display:block;width:260px;max-width:100%;height:auto"></p><div>NEWSLETTER INTERNA</div><h2>'+escapeHTML(state.title)+'</h2><div class="editorial-email">'+safeRich(state.introHtml||baseRich(state.intro))+'</div><small>'+escapeHTML(state.month)+' · Edição '+escapeHTML(state.number)+'</small></div>'+section(state.featured,true)+state.articles.map(a=>section(a,false)).join('')+'<div class="foot">INFRALOBO · Empresa Municipal · Comunicação interna</div></div>'}
+const cssEmail='body{margin:0;padding:0;background:#f1f4ef;font-family:Arial,Helvetica,sans-serif;color:#24312a}.wrap{width:100%;max-width:700px;margin:0 auto;background:#ffffff}.head{padding:38px 52px 34px;background:#fff;border-bottom:6px solid #A7C957}.head h2{color:#386641}.issue-line{color:#386641;font-size:13px;font-weight:bold;letter-spacing:.2px}.section{padding:31px 52px 34px;background:#fff;border-bottom:1px solid #dce6dc;overflow-wrap:break-word}.section img{max-width:100%;height:auto;border-radius:8px}.section h2{color:#386641;margin:13px 0 20px}.section p,.editorial-email p{line-height:1.65;margin:0 0 13px;background:transparent}.section ul,.section ol,.editorial-email ul,.editorial-email ol{margin:8px 0 16px;padding:0 0 0 25px;background:transparent;list-style-position:outside}.section li,.editorial-email li{margin:0 0 7px;padding:0 0 0 4px;line-height:1.6;background:transparent}.section li p,.editorial-email li p{margin:0 0 5px}.editorial-email{line-height:1.65;background:#fff}.foot{padding:28px 52px;background:#386641;color:#fff}a{color:#386641;text-decoration:underline}@media(max-width:600px){.head,.section,.foot{padding-left:26px;padding-right:26px}}';
+function outlookContent(html){
+ const doc=new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
+ const root=doc.body.firstElementChild;
+ root.querySelectorAll('ul,ol').forEach(list=>{
+  list.style.margin='8px 0 16px';
+  list.style.padding='0 0 0 25px';
+  list.style.backgroundColor='transparent';
+  list.style.listStylePosition='outside';
+ });
+ root.querySelectorAll('li').forEach(li=>{
+  li.style.margin='0 0 7px';
+  li.style.padding='0 0 0 4px';
+  li.style.lineHeight='1.6';
+  li.style.backgroundColor='transparent';
+ });
+ root.querySelectorAll('p').forEach(p=>{
+  if(!p.style.marginBottom)p.style.marginBottom='13px';
+  p.style.backgroundColor='transparent';
+ });
+ return root.innerHTML;
+}
+function emailBody(){
+ const issue=escapeHTML(state.month)+' · Edição '+escapeHTML(state.number);
+ const section=(a,lead)=>'<div class="section" style="padding:31px 52px 34px;background-color:#ffffff">'+
+  (lead?'<b style="color:#6A994E">EM DESTAQUE</b>':'')+
+  (imageURL(a.image)?'<p><img src="'+escapeHTML(imageURL(a.image))+'" alt="Imagem da notícia" width="596" style="display:block;max-width:100%;height:auto"></p>':'')+
+  '<h2>'+escapeHTML(a.title)+'</h2><div style="background-color:#ffffff;line-height:1.65">'+outlookContent(articleHTML(a))+'</div>'+
+  (validURL(a.link)?'<p><a href="'+escapeHTML(validURL(a.link))+'">Saber mais</a></p>':'')+'</div>';
+ return '<div class="wrap" style="background-color:#ffffff"><div class="head" style="padding:38px 52px 34px;background-color:#ffffff">'+
+  '<p><img src="https://infralobo-newsletter.vercel.app/logo-infralobo.png" alt="Infralobo Empresa Municipal" width="260" style="display:block;width:260px;max-width:100%;height:auto"></p>'+
+  '<div class="issue-line" style="color:#386641;font-weight:bold">NEWSLETTER INTERNA · '+issue+'</div>'+
+  '<h2>'+escapeHTML(state.title)+'</h2>'+
+  '<div class="editorial-email" style="background-color:#ffffff">'+outlookContent(safeRich(state.introHtml||baseRich(state.intro)))+'</div></div>'+
+  section(state.featured,true)+state.articles.map(a=>section(a,false)).join('')+
+  '<div class="foot" style="padding:28px 52px;background-color:#386641;color:#ffffff">INFRALOBO · Empresa Municipal · Comunicação interna</div></div>';
+}
 function emailHTML(){return '<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Newsletter Infralobo</title><style>'+cssEmail+'</style></head><body>'+emailBody()+'</body></html>'}
 $('htmlExport').addEventListener('click',()=>download(filename('html'),emailHTML(),'text/html;charset=utf-8'));
 $('downloadEmail').addEventListener('click',()=>{const boundary='infralobo-newsletter';const subject='Newsletter Infralobo · '+state.month;const eml=['From: Infralobo <newsletter@infralobo.pt>','To:','Subject: =?UTF-8?B?'+utf8b64(subject)+'?=','MIME-Version: 1.0','Content-Type: multipart/alternative; boundary="'+boundary+'"','','--'+boundary,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',utf8b64([state.title,state.intro,state.featured.title,state.featured.text,...state.articles.flatMap(a=>[a.title,a.text])].join('\n\n')),'--'+boundary,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',utf8b64(emailHTML()),'--'+boundary+'--',''].join('\r\n');download(outlookFilename(),eml,'message/rfc822');notify('E-mail exportado. Abra o .eml no Outlook e confirme o remetente antes de enviar.')});
