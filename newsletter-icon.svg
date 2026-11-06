@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Newsletter interna Infralobo">
+<path fill="#386641" d="M12 45Q12 36 21 30L56 5Q64 0 72 5L107 30Q116 36 116 45V110Q116 120 106 120H22Q12 120 12 110Z"/>
+<path fill="#fff" d="M28 12H85L105 33V89H28Z"/>
+<path fill="#6A994E" d="M85 12V32H105Z"/>
+<rect x="41" y="43" width="48" height="7" rx="3.5" fill="#A7C957"/>
+<rect x="41" y="58" width="59" height="7" rx="3.5" fill="#A7C957"/>
+<path fill="#386641" d="M12 48L64 86L116 48V108Q116 120 104 120H24Q12 120 12 108Z"/>
+<path fill="#A7C957" d="M8 108C32 117 47 82 74 84C94 86 109 99 122 101C106 100 93 107 80 114C54 130 34 125 8 108Z"/>
+<path fill="none" stroke="#fff" stroke-width="4" d="M9 109C37 117 51 88 77 88C97 88 108 100 121 102"/>
+</svg>
