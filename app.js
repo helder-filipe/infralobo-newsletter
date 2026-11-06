@@ -261,19 +261,19 @@ function emailArticle(a,mode='vertical',reverse=false,imageWidth=560){
  return (parts.image?'<div style="margin:0 0 17px">'+parts.image+'</div>':'')+
   '<div style="padding:0 4px">'+parts.text+'</div>';
 }
-function emailRow(items,widths,modes=[],compactColumns=false){
+function emailRow(items,widths,modes=[],compactColumns=false,originalMagazine=false){
  if(!items.length)return '';
  const cols=items.map((a,i)=>{
   const w=widths[i]||Math.round(100/items.length);
   return '<td class="stack-cell" width="'+w+'%" valign="top" style="width:'+w+'%;padding:8px;vertical-align:top">'+
-   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:'+(compactColumns?'9px':'17px')+';font-size:'+(compactColumns?'12px':'14px')+';word-wrap:break-word;overflow-wrap:anywhere">'+emailArticle(a,modes[i]||'vertical',false,compactColumns?145:Math.max(125,Math.floor(570*w/100)))+'</td></tr></table></td>';
+   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:'+(compactColumns?'9px':'17px')+';font-size:'+(compactColumns?'12px':'14px')+';word-wrap:break-word;overflow-wrap:anywhere">'+emailArticle(a,modes[i]||'vertical',false,originalMagazine?600:(compactColumns?145:Math.max(125,Math.floor(570*w/100))))+'</td></tr></table></td>';
  }).join('');
  return '<table role="presentation" class="news-row" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed"><tr>'+cols+'</tr></table>';
 }
 /* No Outlook clássico, "float" não é fiável: uma pequena imagem acompanha
    o início do artigo e o texto restante volta à largura completa. */
 function emailFlowArticle(a,side='left',compact=false){
- const parts=emailArticleParts(a,compact?92:190);
+ const parts=emailArticleParts(a,compact?170:190);
  const doc=new DOMParser().parseFromString('<div>'+outlookContent(articleHTML(a))+'</div>','text/html');
  const root=doc.body.firstElementChild;
  const nodes=Array.from(root.childNodes);
@@ -288,7 +288,7 @@ function emailFlowArticle(a,side='left',compact=false){
   '<h3 style="color:#386641;font-size:'+(compact?'18px':'21px')+';line-height:1.3;margin:0 0 14px">'+escapeHTML(a.title)+'</h3>';
  const link=validURL(a.link)?'<p style="margin:12px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641">Saber mais</a></p>':'';
  if(!parts.image)return '<div style="padding:14px 0;border-bottom:1px solid #dce6dc">'+title+outlookContent(articleHTML(a))+link+'</div>';
- const width=compact?92:190;
+ const width=compact?170:190;
  const image='<img src="'+escapeHTML(imageURL(a.image))+'" width="'+width+'" alt="'+escapeHTML(a.title||'Imagem')+'" style="display:block;width:'+width+'px;max-width:100%;height:auto;border:0">';
  const imageCell='<td valign="top" width="'+width+'" style="width:'+width+'px;padding:'+(side==='right'?'0 0 10px 16px':'0 16px 10px 0')+'">'+image+'</td>';
  const textCell='<td valign="top" style="padding:0;font-size:14px;line-height:1.6;word-wrap:break-word">'+(snippet||'<p style="margin-top:0;color:#66756b"> </p>')+'</td>';
@@ -312,9 +312,9 @@ function emailLayout(articles,layout){
   }
  }else if(layout==='magazine'){
   for(let i=0;i<articles.length;i+=6){
-   if(articles[i])out.push(emailRow(articles.slice(i,i+2),[66,34]));
-   if(articles[i+2])out.push('<div style="padding:8px">'+emailArticle(articles[i+2],'horizontal')+'</div>');
-   if(articles[i+3])out.push(emailRow(articles.slice(i+3,i+6),[34,33,33]));
+   if(articles[i])out.push(emailRow(articles.slice(i,i+2),[66,34],[],false,true));
+   if(articles[i+2])out.push('<div style="padding:8px">'+emailArticle(articles[i+2],'horizontal',false,600)+'</div>');
+   if(articles[i+3])out.push(emailRow(articles.slice(i+3,i+6),[34,33,33],[],false,true));
   }
  }else if(layout==='list'){
   articles.forEach(a=>out.push(emailFlowArticle(a,'left',false)));
