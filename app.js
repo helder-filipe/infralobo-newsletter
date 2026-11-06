@@ -18,15 +18,36 @@ function notify(message){const el=$('toast');el.textContent=message;el.style.dis
 function baseRich(t){return '<p>'+escapeHTML(t||'').replace(/\r\n?/g,'\n').replace(/\n\n+/g,'</p><p>').replace(/\n/g,'<br>')+'</p>'}
 function safeRich(html){
  const doc=new DOMParser().parseFromString('<main>'+String(html||'')+'</main>','text/html');
- const ok=new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','UL','OL','LI','BLOCKQUOTE','SPAN']);
- function visit(n){
-  if(n.nodeType===3)return escapeHTML(n.textContent);
+ const ok=new Set(['P','DIV','BR','B','STRONG','I','EM','U','S','UL','OL','LI','BLOCKQUOTE','SPAN','A']);
+ const urlPattern=/(?:https?:\/\/|www\.)[^\s<>"']+|[a-zA-Z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+/gi;
+ function linkText(raw){
+  const value=String(raw||'');let out='',last=0;urlPattern.lastIndex=0;
+  for(const match of value.matchAll(urlPattern)){
+   const index=match.index;const token=match[0];
+   out+=escapeHTML(value.slice(last,index));
+   const trimmed=token.replace(/[.,;:!?]+$/,'').replace(/\)+$/,m=>m.slice(0,Math.max(0,(token.match(/\(/g)||[]).length-(token.match(/\)/g)||[]).length+m.length)));
+   const tail=token.slice(trimmed.length);
+   const email=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+   const candidate=email?'mailto:'+trimmed:(/^www\./i.test(trimmed)?'https://'+trimmed:trimmed);
+   let href='';
+   try{const u=new URL(candidate);if(['https:','http:','mailto:'].includes(u.protocol))href=u.href}catch{}
+   out+=href?'<a href="'+escapeHTML(href)+'"'+(email?'':' target="_blank" rel="noopener noreferrer"')+'>'+escapeHTML(trimmed)+'</a>':escapeHTML(trimmed);
+   out+=escapeHTML(tail);last=index+token.length;
+  }
+  return out+escapeHTML(value.slice(last));
+ }
+ function visit(n,inLink=false){
+  if(n.nodeType===3)return inLink?escapeHTML(n.textContent):linkText(n.textContent);
   if(n.nodeType!==1)return '';
-  let inside=[...n.childNodes].map(visit).join(''),tag=n.tagName;
+  const tag=n.tagName;
+  const href=tag==='A'?String(n.getAttribute('href')||''):'';
+  const validHref=(()=>{try{const u=new URL(href,location.href);return ['https:','http:','mailto:'].includes(u.protocol)&&/^(https?:|mailto:)/i.test(href)?u.href:''}catch{return''}})();
+  const inside=[...n.childNodes].map(child=>visit(child,inLink||(tag==='A'&&!!validHref))).join('');
   if(!ok.has(tag))return inside;
   if(tag==='BR')return '<br>';
-  let name={DIV:'p',B:'strong',I:'em'}[tag]||tag.toLowerCase(),styles=[];
-  let st=n.style;
+  if(tag==='A')return validHref?'<a href="'+escapeHTML(validHref)+'"'+(validHref.startsWith('mailto:')?'':' target="_blank" rel="noopener noreferrer"')+'>'+inside+'</a>':inside;
+  const name={DIV:'p',B:'strong',I:'em'}[tag]||tag.toLowerCase(),styles=[];
+  const st=n.style;
   if(['P','DIV','LI','BLOCKQUOTE'].includes(tag)){
    const align=st.textAlign||n.getAttribute('align');if(['left','right','center','justify'].includes(align))styles.push('text-align:'+align);
    if(['1','1.15','1.3','1.5','1.75','2'].includes(st.lineHeight))styles.push('line-height:'+st.lineHeight);
@@ -39,7 +60,7 @@ function safeRich(html){
   }
   return '<'+name+(styles.length?' style="'+styles.join(';')+'"':'')+'>'+inside+'</'+name+'>';
  }
- return [...doc.body.firstElementChild.childNodes].map(visit).join('');
+ return [...doc.body.firstElementChild.childNodes].map(node=>visit(node)).join('');
 }
 function articleHTML(a){return safeRich(a.html||baseRich(a.text))}
 function richField(a){
