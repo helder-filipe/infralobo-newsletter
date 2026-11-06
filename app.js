@@ -206,7 +206,7 @@ $('exportJson').addEventListener('click',()=>download(filename('json'),JSON.stri
 $('importJson').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!v||typeof v!=='object'||!Array.isArray(v.articles))throw Error();saveCurrentToArchive();state={...starter(),...v,featured:{...starter().featured,...v.featured},articles:v.articles.slice(0,10),editionId:editionId(),layout:['classic','odd','magazine','list','mosaic','alternating','minimal'].includes(v.layout)?v.layout:'classic'};editUI();save();renderEditionList();notify('Edição importada.')}catch{notify('Ficheiro JSON inválido.')}e.target.value=''});
 const cssEmail='body{margin:0;padding:0;background:#f1f4ef;font-family:Arial,Helvetica,sans-serif;color:#24312a}.wrap{width:100%;max-width:700px;margin:0 auto;background:#ffffff}.head{padding:38px 52px 34px;background:#fff;border-bottom:6px solid #A7C957}.head h2{color:#386641}.issue-line{color:#386641;font-size:13px;font-weight:bold;letter-spacing:.2px}.section{padding:31px 52px 34px;background:#fff;border-bottom:1px solid #dce6dc;overflow-wrap:break-word}.section img{max-width:100%;height:auto;border-radius:8px}.section h2{color:#386641;margin:13px 0 20px}.section p,.editorial-email p{line-height:1.65;margin:0 0 13px;background:transparent}.section ul,.section ol,.editorial-email ul,.editorial-email ol{margin:8px 0 16px;padding:0 0 0 25px;background:transparent;list-style-position:outside}.section li,.editorial-email li{margin:0 0 7px;padding:0 0 0 4px;line-height:1.6;background:transparent}.section li p,.editorial-email li p{margin:0 0 5px}.editorial-email{line-height:1.65;background:#fff}.foot{padding:28px 52px;background:#386641;color:#fff}a{color:#386641;text-decoration:underline}@media(max-width:600px){.head,.section,.foot{padding-left:26px;padding-right:26px}}';
-const cssEmailLayouts=".news-row td,.article-horizontal td{box-sizing:border-box}.email-container a{color:#386641}.email-container ul,.email-container ol{margin:8px 0 16px;padding-left:25px}@media screen and (max-width:600px){.email-container{width:100%!important}.email-pad{padding-left:22px!important;padding-right:22px!important}.news-row .stack-cell,.article-horizontal .stack-cell{display:block!important;width:100%!important;box-sizing:border-box}.news-row{table-layout:auto!important}.compact-image{width:80px!important}}";
+const cssEmailLayouts=".news-row td,.article-horizontal td{box-sizing:border-box}.email-container a{color:#386641}.email-container ul,.email-container ol{margin:8px 0 16px;padding-left:25px}@media screen and (max-width:600px){.email-container{width:100%!important}.email-pad{padding-left:22px!important;padding-right:22px!important}.news-row .stack-cell,.article-horizontal .stack-cell{display:block!important;width:100%!important;box-sizing:border-box}.news-row{table-layout:auto!important}.compact-image{width:80px!important}}@media screen and (max-width:480px){.email-flow-article img[align]{max-width:43%!important;height:auto!important;margin-left:10px!important;margin-right:10px!important}}";
 function outlookContent(html){
  const doc=new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
  const root=doc.body.firstElementChild;
@@ -272,34 +272,23 @@ function emailRow(items,widths,modes=[],compactColumns=false,originalMagazine=fa
 }
 /* No Outlook clássico, "float" não é fiável: uma pequena imagem acompanha
    o início do artigo e o texto restante volta à largura completa. */
+/* Moldagem editorial: alinhar a imagem no próprio fluxo do HTML permite
+   que vários parágrafos a acompanhem. O atributo align/hspace oferece
+   compatibilidade adicional face ao float CSS nos clientes de e-mail. */
 function emailFlowArticle(a,side='left',compact=false){
- const parts=emailArticleParts(a,compact?260:210);
- const doc=new DOMParser().parseFromString('<div>'+outlookContent(articleHTML(a))+'</div>','text/html');
- const root=doc.body.firstElementChild;
- const nodes=Array.from(root.childNodes);
- const firstParagraph=nodes.find(n=>n.nodeType===1&&['P','DIV'].includes(n.tagName));
- let snippet='';
- if(firstParagraph&&firstParagraph.textContent.trim()&&nodes.length>1){
-   snippet=firstParagraph.outerHTML;
-   firstParagraph.remove();
- }
- const trailing=root.innerHTML;
- const title='<div style="margin:0 0 12px;font-size:11px;color:#6A994E;font-weight:bold;text-transform:uppercase">'+escapeHTML(a.category||'Notícia')+'</div>'+
-  '<h3 style="color:#386641;font-size:'+(compact?'18px':'21px')+';line-height:1.3;margin:0 0 14px">'+escapeHTML(a.title)+'</h3>';
- const link=validURL(a.link)?'<p style="margin:12px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641">Saber mais</a></p>':'';
- if(!parts.image)return '<div style="padding:14px 0;border-bottom:1px solid #dce6dc">'+title+outlookContent(articleHTML(a))+link+'</div>';
- const width=compact?260:210;
- const image='<img src="'+escapeHTML(imageURL(a.image))+'" width="'+width+'" alt="'+escapeHTML(a.title||'Imagem')+'" style="display:block;width:'+width+'px;max-width:100%;height:auto;border:0">';
- const imageCell='<td valign="top" width="'+width+'" style="width:'+width+'px;padding:'+(side==='right'?'0 0 10px 16px':'0 16px 10px 0')+'">'+image+'</td>';
- const textCell='<td valign="top" style="padding:0;font-size:14px;line-height:1.6;word-wrap:break-word">'+(snippet||'<p style="margin-top:0;color:#66756b"> </p>')+'</td>';
- const cells=side==='right'?textCell+imageCell:imageCell+textCell;
- const head='<div style="margin:0 0 8px">'+title+'</div>';
- // Sem outro parágrafo, apresentar o corpo em toda a largura abaixo da imagem.
- const beneath=snippet?trailing:outlookContent(articleHTML(a));
- return '<div style="padding:17px 0;border-bottom:1px solid #dce6dc">'+head+
-  (snippet?'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%"><tr>'+cells+'</tr></table>':
-  '<div style="padding:0 0 12px">'+image+'</div>')+
-  '<div style="font-size:14px;line-height:1.65;word-wrap:break-word">'+beneath+link+'</div></div>';
+ const body=outlookContent(articleHTML(a));
+ const url=imageURL(a.image);
+ const width=compact?245:220;
+ const heading='<div style="margin:0 0 9px;font-size:11px;color:#6A994E;font-weight:bold;text-transform:uppercase">'+escapeHTML(a.category||'Notícia')+'</div>'+
+  '<h3 style="color:#386641;font-size:'+(compact?'19px':'21px')+';line-height:1.3;margin:0 0 13px">'+escapeHTML(a.title)+'</h3>';
+ const more=validURL(a.link)?'<p style="margin:13px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Saber mais</a></p>':'';
+ const image=url?'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(a.title||'Imagem da notícia')+
+  '" width="'+width+'" align="'+side+'" hspace="12" vspace="6" style="float:'+side+';display:inline;width:'+width+'px;max-width:48%;height:auto;margin:'+
+  (side==='right'?'3px 0 12px 19px':'3px 19px 12px 0')+';border:0">':'';
+ const content='<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.65;color:#24312a;overflow-wrap:break-word;word-wrap:break-word">'+
+  image+body+more+'</div>';
+ return '<div class="email-flow-article" style="padding:19px 8px 22px;border-bottom:1px solid #dce6dc;background-color:#ffffff">'+
+  heading+content+'<div style="clear:both;height:1px;line-height:1px;font-size:1px">&nbsp;</div></div>';
 }
 function emailLayout(articles,layout){
  const out=[];
