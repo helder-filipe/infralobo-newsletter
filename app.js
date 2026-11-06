@@ -229,9 +229,9 @@ function outlookContent(html){
  return root.innerHTML;
 }
 /* Estruturas com tabelas e estilos inline: funcionam também no Outlook clássico. */
-function emailArticleParts(a){
+function emailArticleParts(a,imageWidth=560){
  const url=imageURL(a.image),fit=a.imageFit==='contain'?'contain':'cover';
- const image=url?'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(a.title||'Imagem da notícia')+'" width="600" style="display:block;width:100%;max-width:100%;height:auto;object-fit:'+fit+';border:0">':'';
+ const image=url?'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(a.title||'Imagem da notícia')+'" width="'+imageWidth+'" style="display:block;width:100%;max-width:100%;height:auto;object-fit:'+fit+';border:0">':'';
  const text='<div style="font-family:Arial,Helvetica,sans-serif;color:#24312a;line-height:1.65;overflow-wrap:break-word">'+
   '<div style="font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6A994E;margin:0 0 7px">'+escapeHTML(a.category||'Notícia')+'</div>'+
   '<h3 style="font-size:20px;line-height:1.3;color:#386641;margin:0 0 15px">'+escapeHTML(a.title)+'</h3>'+
@@ -246,8 +246,8 @@ function emailImageCell(parts,width){
 function emailTextCell(parts,width,padding='22px'){
  return '<td class="stack-cell" valign="top" width="'+width+'" style="width:'+width+';padding:'+padding+';background-color:#ffffff">'+parts.text+'</td>';
 }
-function emailArticle(a,mode='vertical',reverse=false){
- const parts=emailArticleParts(a);
+function emailArticle(a,mode='vertical',reverse=false,imageWidth=560){
+ const parts=emailArticleParts(a,imageWidth);
  if(mode==='horizontal'&&parts.image){
   const cells=reverse?
    emailTextCell(parts,'58%')+emailImageCell(parts,'42%'):
@@ -261,19 +261,19 @@ function emailArticle(a,mode='vertical',reverse=false){
  return (parts.image?'<div style="margin:0 0 17px">'+parts.image+'</div>':'')+
   '<div style="padding:0 4px">'+parts.text+'</div>';
 }
-function emailRow(items,widths,modes=[]){
+function emailRow(items,widths,modes=[],compactColumns=false){
  if(!items.length)return '';
  const cols=items.map((a,i)=>{
   const w=widths[i]||Math.round(100/items.length);
   return '<td class="stack-cell" width="'+w+'%" valign="top" style="width:'+w+'%;padding:8px;vertical-align:top">'+
-   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:17px">'+emailArticle(a,modes[i]||'vertical')+'</td></tr></table></td>';
+   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:'+(compactColumns?'9px':'17px')+';font-size:'+(compactColumns?'12px':'14px')+';word-wrap:break-word;overflow-wrap:anywhere">'+emailArticle(a,modes[i]||'vertical',false,compactColumns?145:Math.max(125,Math.floor(570*w/100)))+'</td></tr></table></td>';
  }).join('');
  return '<table role="presentation" class="news-row" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed"><tr>'+cols+'</tr></table>';
 }
 function emailLayout(articles,layout){
  const out=[];
  if(layout==='classic'){
-  for(let i=0;i<articles.length;i+=3)out.push(emailRow(articles.slice(i,i+3),[34,33,33]));
+  for(let i=0;i<articles.length;i+=3)out.push(emailRow(articles.slice(i,i+3),[34,33,33],[],true));
  }else if(layout==='odd'){
   for(let i=0;i<articles.length;i+=3){
    if(articles[i])out.push(emailRow([articles[i]],[100]));
