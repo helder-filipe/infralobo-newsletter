@@ -266,7 +266,7 @@ function emailRow(items,widths,modes=[],compactColumns=false,originalMagazine=fa
  const cols=items.map((a,i)=>{
   const w=widths[i]||Math.round(100/items.length);
   return '<td class="stack-cell" width="'+w+'%" valign="top" style="width:'+w+'%;padding:8px;vertical-align:top">'+
-   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:'+(compactColumns?'9px':'17px')+';font-size:'+(compactColumns?'12px':'14px')+';word-wrap:break-word;overflow-wrap:anywhere">'+emailArticle(a,modes[i]||'vertical',false,originalMagazine?600:(compactColumns?145:Math.max(125,Math.floor(570*w/100))))+'</td></tr></table></td>';
+   '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#fff;border:1px solid #dce6dc"><tr><td style="padding:'+(compactColumns?'7px':'17px')+';font-size:14px;word-wrap:break-word;overflow-wrap:anywhere">'+emailArticle(a,modes[i]||'vertical',false,originalMagazine?600:(compactColumns?210:Math.max(125,Math.floor(570*w/100))))+'</td></tr></table></td>';
  }).join('');
  return '<table role="presentation" class="news-row" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;table-layout:fixed"><tr>'+cols+'</tr></table>';
 }
@@ -275,10 +275,10 @@ function emailRow(items,widths,modes=[],compactColumns=false,originalMagazine=fa
 /* Moldagem editorial: alinhar a imagem no próprio fluxo do HTML permite
    que vários parágrafos a acompanhem. O atributo align/hspace oferece
    compatibilidade adicional face ao float CSS nos clientes de e-mail. */
-function emailFlowArticle(a,side='left',compact=false){
+function emailFlowArticle(a,side='left',compact=false,imageWidthOverride=0){
  const body=outlookContent(articleHTML(a));
  const url=imageURL(a.image);
- const width=compact?245:220;
+ const width=imageWidthOverride||(compact?245:220);
  const heading='<div style="margin:0 0 9px;font-size:11px;color:#6A994E;font-weight:bold;text-transform:uppercase">'+escapeHTML(a.category||'Notícia')+'</div>'+
   '<h3 style="color:#386641;font-size:'+(compact?'19px':'21px')+';line-height:1.3;margin:0 0 13px">'+escapeHTML(a.title)+'</h3>';
  const more=validURL(a.link)?'<p style="margin:13px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Saber mais</a></p>':'';
@@ -299,21 +299,23 @@ function emailLayout(articles,layout){
    if(articles[i])out.push(emailRow([articles[i]],[100]));
    if(articles[i+1])out.push(emailRow(articles.slice(i+1,i+3),[50,50]));
   }
- }else if(layout==='magazine'){
-  for(let i=0;i<articles.length;i+=6){
-   if(articles[i])out.push(emailRow(articles.slice(i,i+2),[66,34],[],false,true));
-   if(articles[i+2])out.push('<div style="padding:8px">'+emailFlowArticle(articles[i+2],'left',false)+'</div>');
-   if(articles[i+3]){
-    const tail=articles.slice(i+3,i+6);
+  }else if(layout==='magazine'){
+  const preceding=articles.slice(0,-1);
+  for(let i=0;i<preceding.length;i+=6){
+   if(preceding[i])out.push(emailRow(preceding.slice(i,i+2),[66,34],[],false,true));
+   if(preceding[i+2])out.push('<div style="padding:8px">'+emailFlowArticle(preceding[i+2],'left',false)+'</div>');
+   if(preceding[i+3]){
+    const tail=preceding.slice(i+3,i+6);
     if(tail.length===1)out.push('<div style="padding:8px">'+emailFlowArticle(tail[0],'left',false)+'</div>');
     else out.push(emailRow(tail,tail.length===2?[50,50]:[34,33,33],[],false,true));
    }
   }
+  if(articles.length)out.push('<div style="padding:8px">'+emailFlowArticle(articles[articles.length-1],'left',false,315)+'</div>');
  }else if(layout==='list'){
   articles.forEach(a=>out.push(emailFlowArticle(a,'left',false)));
  }else if(layout==='mosaic'){
   for(let i=0;i<articles.length;i+=5){
-   out.push(emailRow(articles.slice(i,i+2),[72,28]));
+   out.push(emailRow(articles.slice(i,i+2),[58,42]));
    if(articles[i+2])out.push(emailRow(articles.slice(i+2,i+5),[34,33,33]));
   }
  }else if(layout==='alternating'){
@@ -328,19 +330,23 @@ function emailLayout(articles,layout){
 function emailBody(){
  const issue=escapeHTML(state.month)+' · Edição '+escapeHTML(state.number);
  const lead=emailArticleParts(state.featured);
+ const spacious=state.layout==='classic'||state.layout==='mosaic';
+ const maxWidth=spacious?840:700;
+ const sidePadding=spacious?14:28;
+ const headerPadding=spacious?36:52;
  return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;background:#f1f4ef"><tr><td align="center" style="padding:20px 8px">'+
- '<table role="presentation" class="email-container" width="700" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;max-width:700px;background:#ffffff"><tr><td class="email-pad" style="padding:38px 52px 34px;border-bottom:6px solid #A7C957;background:#ffffff">'+
+ '<table role="presentation" class="email-container" width="'+maxWidth+'" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;width:100%;max-width:'+maxWidth+'px;background:#ffffff"><tr><td class="email-pad" style="padding:38px '+headerPadding+'px 34px;border-bottom:6px solid #A7C957;background:#ffffff">'+
  '<p><img src="https://infralobo-newsletter.vercel.app/logo-infralobo.png" alt="Infralobo Empresa Municipal" width="260" style="display:block;width:260px;max-width:100%;height:auto"></p>'+
  '<div style="color:#386641;font-weight:bold;font-size:13px">NEWSLETTER INTERNA · '+issue+'</div>'+
  '<h2 style="color:#386641">'+escapeHTML(state.title)+'</h2>'+
  '<div class="editorial-email" style="line-height:1.65;background:#fff">'+outlookContent(safeRich(state.introHtml||baseRich(state.intro)))+'</div></td></tr>'+
- '<tr><td class="email-pad" style="padding:30px 52px 24px;background:#f4f8f1">'+
+ '<tr><td class="email-pad" style="padding:30px '+headerPadding+'px 24px;background:#f4f8f1">'+
  '<div style="font-size:12px;font-weight:bold;letter-spacing:1.2px;color:#6A994E;margin:0 0 12px">EM DESTAQUE</div>'+
  (lead.image?'<div style="margin-bottom:16px">'+lead.image+'</div>':'')+lead.text+'</td></tr>'+
- (state.articles.length?'<tr><td class="email-pad" style="padding:29px 28px 35px;background:#ffffff">'+
+ (state.articles.length?'<tr><td class="email-pad" style="padding:29px '+sidePadding+'px 35px;background:#ffffff">'+
  '<h2 style="color:#386641;margin:0 10px 13px;font-size:23px">Também nesta edição</h2>'+
  emailLayout(state.articles,state.layout)+'</td></tr>':'')+
- '<tr><td style="padding:28px 52px;background-color:#386641;color:#ffffff;font-size:12px">INFRALOBO · Empresa Municipal · Comunicação interna</td></tr>'+
+ '<tr><td style="padding:28px '+headerPadding+'px;background-color:#386641;color:#ffffff;font-size:12px">INFRALOBO · Empresa Municipal · Comunicação interna</td></tr>'+
  '</table></td></tr></table>';
 }
 function emailHTML(){return '<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Newsletter Infralobo</title><style>'+cssEmail+cssEmailLayouts+'</style></head><body>'+emailBody()+'</body></html>'}
