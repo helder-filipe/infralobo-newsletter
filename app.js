@@ -314,10 +314,14 @@ function emailLayout(articles,layout){
  }else if(layout==='list'){
   articles.forEach(a=>out.push(emailFlowArticle(a,'left',false)));
  }else if(layout==='mosaic'){
-  for(let i=0;i<articles.length;i+=5){
-   out.push(emailRow(articles.slice(i,i+2),[58,42]));
-   if(articles[i+2])out.push(emailRow(articles.slice(i+2,i+5),[34,33,33]));
+  // A ultima noticia ocupa um bloco largo, com imagem maior e texto a contorna-la.
+  // As noticias anteriores conservam a composicao assimetrica do mosaico.
+  const preceding=articles.slice(0,-1);
+  for(let i=0;i<preceding.length;i+=5){
+   out.push(emailRow(preceding.slice(i,i+2),[58,42]));
+   if(preceding[i+2])out.push(emailRow(preceding.slice(i+2,i+5),[34,33,33]));
   }
+  if(articles.length)out.push('<div style="padding:8px">'+emailFlowArticle(articles[articles.length-1],'left',false,350)+'</div>');
  }else if(layout==='alternating'){
   articles.forEach((a,i)=>out.push(emailFlowArticle(a,i%2===1?'right':'left',false)));
  }else if(layout==='minimal'){
