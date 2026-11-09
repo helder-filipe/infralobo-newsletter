@@ -117,9 +117,32 @@ function linkedEmailImage(a,html){const url=a.imageClickable?imageOriginalURL(a)
 function picture(article,cls=''){const a=typeof article==='string'?{image:article}:article;const safe=imageURL(a.image);const fit=['cover','contain'].includes(a.imageFit)?a.imageFit:'cover';const pos=['center','top','bottom','left','right'].includes(a.imagePosition)?a.imagePosition:'center';return safe?'<img class="'+cls+'" src="'+escapeHTML(safe)+'" alt="Imagem de '+escapeHTML(a.title||'notícia')+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" '+(a.imageClickable&&imageOriginalURL(a)?'data-image-original="'+escapeHTML(imageOriginalURL(a))+'" tabindex="0" role="link" title="Abrir imagem original"':'')+' style="object-fit:'+fit+';object-position:'+pos+'">':'<div class="placeholder">INFRALOBO · Notícias</div>'}
 function readLink(a){const u=validURL(a.link);return u?'<p><a href="'+escapeHTML(u)+'" target="_blank" rel="noopener noreferrer" style="color:#386641;font-weight:700">Ver documento ↗</a></p>':''}
 function articleMarkup(a,i,full=false){return '<article class="article">'+picture(a)+'<div><span class="eyebrow">'+escapeHTML(a.category||'Notícia')+'</span><h3>'+escapeHTML(a.title)+'</h3><div class="body-copy '+(full?'':'clamp')+'" id="body-'+i+'">'+articleHTML(a)+'</div>'+(full?'':'<button class="read-more" aria-expanded="false" data-more="'+i+'">Ver mais</button>')+readLink(a)+'</div></article>'}
+const footerLogoPath='./logo-infralobo-rodape.png';
+const footerLogoURL='https://infralobo-newsletter.vercel.app/logo-infralobo-rodape.png';
+const footerLogoCID='rodape-infralobo@newsletter.infralobo.pt';
+const footerLinks=[
+ ['www.infralobo.pt','https://www.infralobo.pt/'],
+ ['YouTube','https://www.youtube.com/@infraloboe.m.9536'],
+ ['Facebook','https://www.facebook.com/Infralobo'],
+ ['Instagram','https://www.instagram.com/infralobo/']
+];
+function footerLines(){
+ const month=String(state.month??'').trim();
+ return ['INFRALOBO · Empresa Municipal','Comunicação interna'+(month?' · '+month:''),
+  'Esta comunicação destina-se aos colaboradores da Infralobo.'];
+}
+function footerMarkup(logoSrc){
+ const [brand,issue,note]=footerLines().map(escapeHTML);
+ const [website,...social]=footerLinks.map(([label,url])=>
+  '<a href="'+url+'" target="_blank" rel="noopener noreferrer" style="color:#ffffff;text-decoration:underline;white-space:nowrap">'+label+'</a>');
+ return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>'+
+  '<td bgcolor="#ffffff" style="background-color:#ffffff;padding:7px 9px"><img src="'+escapeHTML(logoSrc)+'" alt="Logótipo da Infralobo" width="120" height="48" style="display:block;width:120px;height:48px;border:0"></td></tr></table>'+
+  '<p style="margin:12px 0 0;line-height:1.55"><strong style="color:#e2f4c1">'+brand+'</strong><br>'+issue+'<br>'+note+'</p>'+
+  '<p style="margin:8px 0 0;line-height:1.65">'+website+'<br>'+social.join(' · ')+'</p>';
+}
 function template(full=false){
 const highlight=state.featured;
-return '<div class="newsletter"><div class="newsletter-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><img class="header-logo" src="./logo-infralobo.png" alt="Infralobo Empresa Municipal"><div style="text-align:right"><div class="eyebrow" style="margin:0 0 6px">NEWSLETTER INTERNA</div><small class="issue">'+escapeHTML(state.month)+' · Edição '+escapeHTML(state.number)+'</small></div></div><h1>'+escapeHTML(state.title)+'</h1><div class="intro editorial-copy">'+safeRich(state.introHtml||baseRich(state.intro))+'</div></div><div class="content"><div class="eyebrow" style="margin-bottom:15px">☆ &nbsp; EM DESTAQUE</div><div class="featured">'+picture(highlight)+'<div class="copy"><span class="eyebrow">'+escapeHTML(highlight.category)+'</span><h2>'+escapeHTML(highlight.title)+'</h2><div class="body-copy '+(full?'':'clamp')+'" id="body-featured">'+articleHTML(highlight)+'</div>'+(full?'':'<button class="read-more" data-more="featured" aria-expanded="false">Ver mais →</button>')+readLink(highlight)+'</div></div>'+(state.articles.length?'<h2 class="section-title">Também nesta edição <span class="mini muted">'+state.articles.length+' notícias</span></h2><div class="news-grid layout-'+escapeHTML(state.layout)+'">'+state.articles.map((a,i)=>articleMarkup(a,i,full)).join('')+'</div>':'')+'</div><div class="footer"><strong>INFRALOBO · Empresa Municipal</strong><div>Comunicação interna · '+escapeHTML(state.month)+'</div><div>Esta comunicação destina-se aos colaboradores da Infralobo.</div><div><a href="https://www.infralobo.pt">www.infralobo.pt</a></div></div></div>'
+return '<div class="newsletter"><div class="newsletter-header"><div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap"><img class="header-logo" src="./logo-infralobo.png" alt="Infralobo Empresa Municipal"><div style="text-align:right"><div class="eyebrow" style="margin:0 0 6px">NEWSLETTER INTERNA</div><small class="issue">'+escapeHTML(state.month)+' · Edição '+escapeHTML(state.number)+'</small></div></div><h1>'+escapeHTML(state.title)+'</h1><div class="intro editorial-copy">'+safeRich(state.introHtml||baseRich(state.intro))+'</div></div><div class="content"><div class="eyebrow" style="margin-bottom:15px">☆ &nbsp; EM DESTAQUE</div><div class="featured">'+picture(highlight)+'<div class="copy"><span class="eyebrow">'+escapeHTML(highlight.category)+'</span><h2>'+escapeHTML(highlight.title)+'</h2><div class="body-copy '+(full?'':'clamp')+'" id="body-featured">'+articleHTML(highlight)+'</div>'+(full?'':'<button class="read-more" data-more="featured" aria-expanded="false">Ver mais →</button>')+readLink(highlight)+'</div></div>'+(state.articles.length?'<h2 class="section-title">Também nesta edição <span class="mini muted">'+state.articles.length+' notícias</span></h2><div class="news-grid layout-'+escapeHTML(state.layout)+'">'+state.articles.map((a,i)=>articleMarkup(a,i,full)).join('')+'</div>':'')+'</div><div class="footer">'+footerMarkup(footerLogoPath)+'</div></div>'
 }
 function renderPreview(){$('preview').innerHTML=template(false);$('editionName').textContent=state.month;$('editionMeta').textContent='Edição '+state.number;$('editionCount').textContent=(1+state.articles.length)+' / 10 notícias';$('sideEdition').textContent='●  '+state.month+' · '+state.number;$('layoutSelect').value=state.layout}
 function updateFromEditor(e){const el=e.target;if(!el.dataset.prop && !['month','number','title','intro'].includes(el.id))return;const target=el.closest('[data-article]');if(target){const ob=target.dataset.article==='featured'?state.featured:state.articles[Number(target.dataset.article)];ob[el.dataset.prop]=el.type==='checkbox'?el.checked:el.value}else state[el.id]=el.value;save()}
@@ -334,7 +357,7 @@ function emailLayout(articles,layout){
  }
  return out.join('');
 }
-function emailBody(){
+function emailBody(footerLogoSrc){
  const issue=escapeHTML(state.month)+' · Edição '+escapeHTML(state.number);
  const lead=emailArticleParts(state.featured);
  const spacious=state.layout==='classic'||state.layout==='mosaic';
@@ -353,12 +376,55 @@ function emailBody(){
  (state.articles.length?'<tr><td class="email-pad" style="padding:29px '+sidePadding+'px 35px;background:#ffffff">'+
  '<h2 style="color:#386641;margin:0 10px 13px;font-size:23px">Também nesta edição</h2>'+
  emailLayout(state.articles,state.layout)+'</td></tr>':'')+
- '<tr><td style="padding:28px '+headerPadding+'px;background-color:#386641;color:#ffffff;font-size:12px">INFRALOBO · Empresa Municipal · Comunicação interna</td></tr>'+
+ '<tr><td class="email-pad" bgcolor="#386641" style="padding:28px '+headerPadding+'px;background-color:#386641;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px">'+footerMarkup(footerLogoSrc)+'</td></tr>'+
  '</table></td></tr></table>';
 }
-function emailHTML(){return '<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Newsletter Infralobo</title><style>'+cssEmail+cssEmailLayouts+'</style></head><body>'+emailBody()+'</body></html>'}
+function emailHTML(footerLogoSrc=footerLogoURL){return '<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Newsletter Infralobo</title><style>'+cssEmail+cssEmailLayouts+'</style></head><body>'+emailBody(footerLogoSrc)+'</body></html>'}
 $('htmlExport').addEventListener('click',()=>download(filename('html'),emailHTML(),'text/html;charset=utf-8'));
-$('downloadEmail').addEventListener('click',()=>{const boundary='infralobo-newsletter';const subject='Newsletter Infralobo · '+state.month;const eml=['From: Infralobo <newsletter@infralobo.pt>','To:','Subject: =?UTF-8?B?'+utf8b64(subject)+'?=','MIME-Version: 1.0','Content-Type: multipart/alternative; boundary="'+boundary+'"','','--'+boundary,'Content-Type: text/plain; charset=UTF-8','Content-Transfer-Encoding: base64','',utf8b64([state.title,state.intro,state.featured.title,state.featured.text,...state.articles.flatMap(a=>[a.title,a.text])].join('\n\n')),'--'+boundary,'Content-Type: text/html; charset=UTF-8','Content-Transfer-Encoding: base64','',utf8b64(emailHTML()),'--'+boundary+'--',''].join('\r\n');download(outlookFilename(),eml,'message/rfc822');notify('E-mail exportado. Abra o .eml no Outlook e confirme o remetente antes de enviar.')});
+async function loadFooterLogo(){
+ try{
+  const response=await fetch(footerLogoPath);
+  if(!response.ok||!response.headers.get('content-type')?.startsWith('image/png'))return '';
+  const bytes=new Uint8Array(await response.arrayBuffer());
+  return btoa(Array.from(bytes,b=>String.fromCharCode(b)).join(''));
+ }catch{return ''}
+}
+function mimePart(type,base64,headers=[]){
+ return ['Content-Type: '+type,'Content-Transfer-Encoding: base64',...headers,'',
+  (base64.match(/.{1,76}/g)||[]).join('\r\n')].join('\r\n');
+}
+function outlookMessage(subject,plain,html,logo){
+ const boundary='infralobo-newsletter';
+ const related=boundary+'-related';
+ const htmlPart=mimePart('text/html; charset=UTF-8',utf8b64(logo?html:
+  html.replace('src="cid:'+footerLogoCID+'"','src="'+footerLogoURL+'"')));
+ const htmlBody=logo?[
+  'Content-Type: multipart/related; type="text/html"; boundary="'+related+'"',
+  '','--'+related,htmlPart,'--'+related,
+  mimePart('image/png',logo,['Content-ID: <'+footerLogoCID+'>','Content-Disposition: inline; filename="logo-infralobo-rodape.png"']),
+  '--'+related+'--'
+ ].join('\r\n'):htmlPart;
+ return ['From: Infralobo <newsletter@infralobo.pt>','To:',
+  'Subject: =?UTF-8?B?'+utf8b64(subject)+'?=','MIME-Version: 1.0',
+  'Content-Type: multipart/alternative; boundary="'+boundary+'"','','--'+boundary,
+  mimePart('text/plain; charset=UTF-8',utf8b64(plain)),
+  '--'+boundary,htmlBody,'--'+boundary+'--',''].join('\r\n');
+}
+$('downloadEmail').addEventListener('click',async e=>{
+ const button=e.currentTarget;
+ const name=outlookFilename();
+ const subject='Newsletter Infralobo · '+state.month;
+ const footer=[...footerLines(),...footerLinks.map(([label,url])=>label+' — '+url)].join('\n');
+ const plain=[state.title,state.intro,state.featured.title,state.featured.text,
+  ...state.articles.flatMap(a=>[a.title,a.text]),footer].join('\n\n');
+ const html=emailHTML('cid:'+footerLogoCID);
+ button.disabled=true;
+ try{
+  const logo=await loadFooterLogo();
+  download(name,outlookMessage(subject,plain,html,logo),'message/rfc822');
+  notify('E-mail exportado. Abra o .eml no Outlook e confirme o remetente antes de enviar.');
+ }finally{button.disabled=false}
+});
 function utf8b64(str){return btoa(Array.from(new TextEncoder().encode(str),b=>String.fromCharCode(b)).join(''))}
 $('print').addEventListener('click',()=>window.print());
 function setView(preview){document.body.classList.toggle('view-preview',preview);$('tabPreview').classList.toggle('active',preview);$('tabEdit').classList.toggle('active',!preview)}
