@@ -115,7 +115,7 @@ $('count').textContent='('+state.articles.length+'/10)';$('add').disabled=state.
 function imageOriginalURL(a){return validURL(a.imageOriginal)||validURL(a.image)||''}
 function linkedEmailImage(a,html){const url=a.imageClickable?imageOriginalURL(a):'';return url?'<a href="'+escapeHTML(url)+'" target="_blank" title="Abrir imagem original">'+html+'</a>':html}
 function picture(article,cls=''){const a=typeof article==='string'?{image:article}:article;const safe=imageURL(a.image);const fit=['cover','contain'].includes(a.imageFit)?a.imageFit:'cover';const pos=['center','top','bottom','left','right'].includes(a.imagePosition)?a.imagePosition:'center';return safe?'<img class="'+cls+'" src="'+escapeHTML(safe)+'" alt="Imagem de '+escapeHTML(a.title||'notícia')+'" loading="lazy" decoding="async" referrerpolicy="no-referrer" '+(a.imageClickable&&imageOriginalURL(a)?'data-image-original="'+escapeHTML(imageOriginalURL(a))+'" tabindex="0" role="link" title="Abrir imagem original"':'')+' style="object-fit:'+fit+';object-position:'+pos+'">':'<div class="placeholder">INFRALOBO · Notícias</div>'}
-function readLink(a){const u=validURL(a.link);return u?'<p><a href="'+escapeHTML(u)+'" target="_blank" rel="noopener noreferrer" style="color:#386641;font-weight:700">Saber mais ↗</a></p>':''}
+function readLink(a){const u=validURL(a.link);return u?'<p><a href="'+escapeHTML(u)+'" target="_blank" rel="noopener noreferrer" style="color:#386641;font-weight:700">Ver documento ↗</a></p>':''}
 function articleMarkup(a,i,full=false){return '<article class="article">'+picture(a)+'<div><span class="eyebrow">'+escapeHTML(a.category||'Notícia')+'</span><h3>'+escapeHTML(a.title)+'</h3><div class="body-copy '+(full?'':'clamp')+'" id="body-'+i+'">'+articleHTML(a)+'</div>'+(full?'':'<button class="read-more" aria-expanded="false" data-more="'+i+'">Ver mais</button>')+readLink(a)+'</div></article>'}
 function template(full=false){
 const highlight=state.featured;
@@ -239,7 +239,7 @@ function emailArticleParts(a,imageWidth=560){
   '<div style="font-size:11px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#6A994E;margin:0 0 7px">'+escapeHTML(a.category||'Notícia')+'</div>'+
   '<h3 style="font-size:'+(imageWidth<=160?'15px':'20px')+';line-height:1.3;color:#386641;margin:0 0 12px;word-break:break-word">'+escapeHTML(a.title)+'</h3>'+
   outlookContent(articleHTML(a))+
-  (validURL(a.link)?'<p style="margin:14px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Saber mais</a></p>':'')+
+  (validURL(a.link)?'<p style="margin:14px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Ver documento</a></p>':'')+
   '</div>';
  return {image,text};
 }
@@ -284,7 +284,7 @@ function emailFlowArticle(a,side='left',compact=false,imageWidthOverride=0){
  const width=imageWidthOverride||(compact?245:220);
  const heading='<div style="margin:0 0 9px;font-size:11px;color:#6A994E;font-weight:bold;text-transform:uppercase">'+escapeHTML(a.category||'Notícia')+'</div>'+
   '<h3 style="color:#386641;font-size:'+(compact?'19px':'21px')+';line-height:1.3;margin:0 0 13px">'+escapeHTML(a.title)+'</h3>';
- const more=validURL(a.link)?'<p style="margin:13px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Saber mais</a></p>':'';
+ const more=validURL(a.link)?'<p style="margin:13px 0 0"><a href="'+escapeHTML(validURL(a.link))+'" style="color:#386641;font-weight:bold">Ver documento</a></p>':'';
  const image=url?linkedEmailImage(a,'<img src="'+escapeHTML(url)+'" alt="'+escapeHTML(a.title||'Imagem da notícia')+
   '" width="'+width+'" align="'+side+'" hspace="12" vspace="6" style="float:'+side+';display:inline;width:'+width+'px;max-width:48%;height:auto;margin:'+
   (side==='right'?'3px 0 12px 19px':'3px 19px 12px 0')+';border:0">'):'';
