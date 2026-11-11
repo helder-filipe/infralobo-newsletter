@@ -71,7 +71,7 @@ function richField(a){
  '<button type="button" data-command="justifyLeft" title="Alinhar à esquerda" aria-label="Alinhar à esquerda">Esquerda</button><button type="button" data-command="justifyCenter" title="Centrar" aria-label="Centrar texto">Centro</button><button type="button" data-command="justifyRight" title="Alinhar à direita" aria-label="Alinhar à direita">Direita</button><button type="button" data-command="justifyFull" title="Justificar" aria-label="Justificar texto">Justificar</button>'+
  '<label>Entrelinhas <select data-style="line"><option value="1">1,0</option><option value="1.15">1,15</option><option value="1.3">1,3</option><option value="1.5" selected>1,5</option><option value="1.75">1,75</option><option value="2">2,0</option></select></label>'+
  '<label>Espaço após <select data-style="space"><option value="0">0 px</option><option value="8">8 px</option><option value="12" selected>12 px</option><option value="16">16 px</option><option value="24">24 px</option><option value="32">32 px</option></select></label>'+
- '<button type="button" data-command="removeFormat" title="Limpar formatação">Limpar</button></div>'+
+ '<button type="button" data-command="removeFormat" title="Limpar formatação">Limpar</button><button type="button" data-normalize-rich="1" title="Normalizar alinhamento e espaçamentos deste artigo sem eliminar negritos, listas ou links">Uniformizar</button></div>'+
  '<div class="rich-input" contenteditable="true" data-rich="1" role="textbox" aria-label="Texto completo" aria-multiline="true">'+articleHTML(a)+'</div>'+
  '<small class="muted">Selecione o texto para formatar. O alinhamento e os espaçamentos aplicam-se aos parágrafos.</small></div>';
 }
@@ -90,18 +90,89 @@ function richSelectionParagraphs(edit){
  let p=selection.anchorNode?.parentElement?.closest('p,li,blockquote');
  return p&&edit.contains(p)?[p]:[];
 }
+function richContext(edit){
+ const selection=window.getSelection();
+ if(!selection||!selection.rangeCount||!edit.contains(selection.anchorNode))return null;
+ const element=selection.anchorNode.nodeType===1?selection.anchorNode:selection.anchorNode.parentElement;
+ return element?.closest('p,div,li,blockquote')||edit;
+}
+function updateRichToolbar(edit){
+ if(!edit)return;
+ const wrap=edit.closest('.rich-wrap');
+ if(!wrap)return;
+ const active=richContext(edit);
+ if(!active)return;
+ const commandNames=['bold','italic','underline','insertOrderedList','insertUnorderedList','justifyLeft','justifyCenter','justifyRight','justifyFull'];
+ commandNames.forEach(command=>{
+  const button=wrap.querySelector('[data-command="'+command+'"]');
+  if(!button)return;
+  let selected=false;
+  try{selected=document.queryCommandState(command)}catch{}
+  if(['justifyLeft','justifyCenter','justifyRight','justifyFull'].includes(command)){
+   const align=getComputedStyle(active).textAlign;
+   selected=({'justifyLeft':'left','justifyCenter':'center','justifyRight':'right','justifyFull':'justify'})[command]===align;
+  }else if(command==='bold'||command==='italic'||command==='underline'){
+   const styles=getComputedStyle(active);
+   const inline=selectionAncestor(edit);
+   const target=inline?getComputedStyle(inline):styles;
+   if(command==='bold')selected=selected||target.fontWeight==='bold'||Number(target.fontWeight)>=600;
+   if(command==='italic')selected=selected||target.fontStyle==='italic';
+   if(command==='underline')selected=selected||target.textDecorationLine.includes('underline');
+  }
+  button.classList.toggle('is-active',!!selected);
+  button.setAttribute('aria-pressed',String(!!selected));
+ });
+ const computed=getComputedStyle(active);
+ const line=wrap.querySelector('[data-style="line"]');
+ const space=wrap.querySelector('[data-style="space"]');
+ if(line){
+  let value=active.style.lineHeight||'1.5';
+  if(value.endsWith('px')){const fs=parseFloat(computed.fontSize);value=String(Math.round(parseFloat(value)/fs*100)/100);}
+  line.value=[...line.options].some(option=>option.value===value)?value:'1.5';
+ }
+ if(space){
+  const raw=active.style.marginBottom||'12px';
+  const margin=String(parseInt(raw,10));
+  space.value=[...space.options].some(option=>option.value===margin)?margin:'12';
+ }
+}
+function selectionAncestor(edit){
+ const sel=window.getSelection();
+ const node=sel?.anchorNode;
+ if(!node||!edit.contains(node))return null;
+ return node.nodeType===1?node:node.parentElement;
+}
+function normalizeRichArticle(edit){
+ if(!edit)return;
+ edit.querySelectorAll('p,div,li,blockquote').forEach(node=>{
+  node.style.removeProperty('text-align');
+  node.removeAttribute('align');
+  node.style.removeProperty('line-height');
+  node.style.removeProperty('margin-top');
+  node.style.removeProperty('margin-bottom');
+  node.style.removeProperty('font-size');
+  node.style.removeProperty('font-family');
+ });
+ storeRich(edit);
+ updateRichToolbar(edit);
+ notify('Formatação de parágrafos uniformizada; listas, links e destaques preservados.');
+}
 function onRichClick(e){
+ const normalize=e.target.closest('[data-normalize-rich]');
+ if(normalize){normalizeRichArticle(normalize.closest('.rich-wrap').querySelector('[data-rich]'));return;}
  const b=e.target.closest('[data-command]');if(!b)return;
  const edit=b.closest('.rich-wrap').querySelector('[data-rich]');
- edit.focus();document.execCommand(b.dataset.command,false,null);storeRich(edit);
+ edit.focus();
+ document.execCommand(b.dataset.command,false,null);
+ storeRich(edit);updateRichToolbar(edit);
 }
 function onRichChange(e){
  const sel=e.target.closest('[data-style]');if(!sel)return;
  const edit=sel.closest('.rich-wrap').querySelector('[data-rich]');
  const nodes=richSelectionParagraphs(edit);
- if(!nodes.length){notify('Selecione um parágrafo antes de escolher o espaçamento.');return}
+ if(!nodes.length){notify('Coloque o cursor num parágrafo antes de escolher o espaçamento.');return}
  for(const p of nodes){if(sel.dataset.style==='line')p.style.lineHeight=sel.value;else p.style.marginBottom=sel.value+'px'}
- storeRich(edit);
+ storeRich(edit);updateRichToolbar(edit);
 }
 
 const field=(label,value,kind='input',key='')=>'<label class="field">'+label+(kind==='textarea'?'<textarea data-prop="'+key+'">'+escapeHTML(value)+'</textarea>':'<input data-prop="'+key+'" value="'+escapeHTML(value)+'">')+'</label>';
@@ -141,7 +212,7 @@ function footerMarkup(imageSrc){
   return '<a href="'+url+'" target="_blank" rel="noopener noreferrer" style="color:#ffffff;text-decoration:underline;white-space:nowrap">'+image+label+'</a>';
  });
  return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>'+
-  '<td bgcolor="#ffffff" style="background-color:#ffffff;padding:7px 9px"><img src="'+escapeHTML(imageSrc(footerLogo))+'" alt="Logótipo da Infralobo" width="120" height="48" style="display:block;width:120px;height:48px;border:0"></td></tr></table>'+
+  '<td style="padding:0;background-color:transparent"><img src="'+escapeHTML(imageSrc(footerLogo))+'" alt="Logótipo da Infralobo" width="120" height="48" style="display:block;width:120px;height:48px;border:0;background-color:transparent"></td></tr></table>'+
   '<p style="margin:12px 0 0;line-height:1.55"><strong style="color:#e2f4c1">'+brand+'</strong><br>'+issue+'<br>'+note+'</p>'+
   '<p style="margin:8px 0 0;line-height:1.65">'+website+'</p>'+
   '<p style="margin:8px 0 0;line-height:2.2">'+social.join('&nbsp;&nbsp; ')+'</p>';
@@ -154,8 +225,9 @@ function renderPreview(){$('preview').innerHTML=template(false);$('editionName')
 function updateFromEditor(e){const el=e.target;if(!el.dataset.prop && !['month','number','title','intro'].includes(el.id))return;const target=el.closest('[data-article]');if(target){const ob=target.dataset.article==='featured'?state.featured:state.articles[Number(target.dataset.article)];ob[el.dataset.prop]=el.type==='checkbox'?el.checked:el.value}else state[el.id]=el.value;save()}
 ['month','number','title'].forEach(id=>$(id).addEventListener('input',updateFromEditor));
 $('featuredFields').addEventListener('input',updateFromEditor);
-for(const id of ['editorialFields','featuredFields','articleFields']){const el=$(id);el.addEventListener('input',e=>{if(e.target.matches('[data-rich]'))storeRich(e.target)});el.addEventListener('mousedown',e=>{if(e.target.closest('[data-command]'))e.preventDefault()});el.addEventListener('click',onRichClick);el.addEventListener('change',onRichChange)}
+for(const id of ['editorialFields','featuredFields','articleFields']){const el=$(id);el.addEventListener('input',e=>{if(e.target.matches('[data-rich]'))storeRich(e.target)});el.addEventListener('mousedown',e=>{if(e.target.closest('[data-command]'))e.preventDefault()});el.addEventListener('keyup',e=>{if(e.target.matches('[data-rich]'))updateRichToolbar(e.target)});el.addEventListener('mouseup',e=>{const edit=e.target.closest('[data-rich]');if(edit)updateRichToolbar(edit)});el.addEventListener('focusin',e=>{if(e.target.matches('[data-rich]'))updateRichToolbar(e.target)});el.addEventListener('click',onRichClick);el.addEventListener('change',onRichChange)}
 
+document.addEventListener('selectionchange',()=>{const node=window.getSelection()?.anchorNode;const el=node?.nodeType===1?node:node?.parentElement;const edit=el?.closest?.('[data-rich]');if(edit)updateRichToolbar(edit)});
 function swapFeaturedWith(index){
  if(!Number.isInteger(index)||index<0||index>=state.articles.length)return;
  const previous=state.featured;
@@ -237,7 +309,7 @@ function outlookFilename(){
 $('exportJson').addEventListener('click',()=>download(filename('json'),JSON.stringify(state,null,2),'application/json'));
 $('importJson').addEventListener('click',()=>$('fileInput').click());
 $('fileInput').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{const v=JSON.parse(await f.text());if(!v||typeof v!=='object'||!Array.isArray(v.articles))throw Error();saveCurrentToArchive();state={...starter(),...v,featured:{...starter().featured,...v.featured},articles:v.articles.slice(0,10),editionId:editionId(),layout:['classic','odd','magazine','list','mosaic','alternating','minimal'].includes(v.layout)?v.layout:'classic'};editUI();save();renderEditionList();notify('Edição importada.')}catch{notify('Ficheiro JSON inválido.')}e.target.value=''});
-const cssEmail='body{margin:0;padding:0;background:#f1f4ef;font-family:Arial,Helvetica,sans-serif;color:#24312a}.wrap{width:100%;max-width:700px;margin:0 auto;background:#ffffff}.head{padding:38px 52px 34px;background:#fff;border-bottom:6px solid #A7C957}.head h2{color:#386641}.issue-line{color:#386641;font-size:13px;font-weight:bold;letter-spacing:.2px}.section{padding:31px 52px 34px;background:#fff;border-bottom:1px solid #dce6dc;overflow-wrap:break-word}.section img{max-width:100%;height:auto;border-radius:8px}.section h2{color:#386641;margin:13px 0 20px}.section p,.editorial-email p{line-height:1.65;margin:0 0 13px;background:transparent}.section ul,.section ol,.editorial-email ul,.editorial-email ol{margin:8px 0 16px;padding:0 0 0 25px;background:transparent;list-style-position:outside}.section li,.editorial-email li{margin:0 0 7px;padding:0 0 0 4px;line-height:1.6;background:transparent}.section li p,.editorial-email li p{margin:0 0 5px}.editorial-email{line-height:1.65;background:#fff}.foot{padding:28px 52px;background:#386641;color:#fff}a{color:#386641;text-decoration:underline}@media(max-width:600px){.head,.section,.foot{padding-left:26px;padding-right:26px}}';
+const cssEmail='body{margin:0;padding:0;background:#f1f4ef;font-family:Arial,Helvetica,sans-serif;color:#24312a}.wrap{width:100%;max-width:700px;margin:0 auto;background:#ffffff}.head{padding:38px 52px 34px;background:#fff;border-bottom:6px solid #A7C957}.head h2{color:#386641}.issue-line{color:#386641;font-size:13px;font-weight:bold;letter-spacing:.2px}.section{padding:31px 52px 34px;background:#fff;border-bottom:1px solid #dce6dc;overflow-wrap:break-word}.section img{max-width:100%;height:auto;border-radius:8px}.section h2{color:#386641;margin:13px 0 20px}.section p,.editorial-email p{line-height:1.65;margin:0 0 13px;background:transparent}.section ul,.section ol,.editorial-email ul,.editorial-email ol{margin:8px 0 16px;padding:0 0 0 25px;background:transparent;list-style-position:outside}.section li,.editorial-email li{margin:0 0 7px;padding:0 0 0 4px;line-height:1.6;background:transparent}.section li p,.editorial-email li p{margin:0 0 5px}.editorial-email{line-height:1.65;background:#fff}.foot{padding:28px 52px;background:#6A994E;color:#fff}a{color:#386641;text-decoration:underline}@media(max-width:600px){.head,.section,.foot{padding-left:26px;padding-right:26px}}';
 const cssEmailLayouts=".news-row td,.article-horizontal td{box-sizing:border-box}.email-container a{color:#386641}.email-container ul,.email-container ol{margin:8px 0 16px;padding-left:25px}@media screen and (max-width:600px){.email-container{width:100%!important}.email-pad{padding-left:22px!important;padding-right:22px!important}.news-row .stack-cell,.article-horizontal .stack-cell{display:block!important;width:100%!important;box-sizing:border-box}.news-row{table-layout:auto!important}.compact-image{width:80px!important}}@media screen and (max-width:480px){.email-flow-article img[align]{max-width:43%!important;height:auto!important;margin-left:10px!important;margin-right:10px!important}}";
 function outlookContent(html){
  const doc=new DOMParser().parseFromString('<div>'+html+'</div>','text/html');
@@ -382,7 +454,7 @@ function emailBody(footerImageSrc){
  (state.articles.length?'<tr><td class="email-pad" style="padding:29px '+sidePadding+'px 35px;background:#ffffff">'+
  '<h2 style="color:#386641;margin:0 10px 13px;font-size:23px">Também nesta edição</h2>'+
  emailLayout(state.articles,state.layout)+'</td></tr>':'')+
- '<tr><td class="email-pad" bgcolor="#386641" style="padding:28px '+headerPadding+'px;background-color:#386641;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px">'+footerMarkup(footerImageSrc)+'</td></tr>'+
+ '<tr><td class="email-pad" bgcolor="#6A994E" style="padding:28px '+headerPadding+'px;background-color:#6A994E;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px">'+footerMarkup(footerImageSrc)+'</td></tr>'+
  '</table></td></tr></table>';
 }
 function emailHTML(footerImageSrc=footerPublicSrc){return '<!doctype html><html lang="pt"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Newsletter Infralobo</title><style>'+cssEmail+cssEmailLayouts+'</style></head><body>'+emailBody(footerImageSrc)+'</body></html>'}
